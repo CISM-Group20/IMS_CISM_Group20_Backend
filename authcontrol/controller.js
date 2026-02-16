@@ -20,18 +20,24 @@ exports.login = async (req, res) => {
         .json({ loginStatus: false, msg: "Incorrect email" });
     }
 
-    if (password !== user.password) {
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
       return res
         .status(401)
         .json({ loginStatus: false, msg: "Incorrect password" });
     }
 
-    // No JWT token - return userId directly
+    const token = jwt.sign(
+      { email: user.email, id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "3d" }
+    );
+
     res.status(200).json({
       msg: "Login Successful...!",
-      username: user.fname + " " + user.lname,
+      username: user.username,
       role: user.role,
-      userId: user._id,
+      token,
     });
   } catch (error) {
     console.error(error);
@@ -40,6 +46,7 @@ exports.login = async (req, res) => {
       .json({ loginStatus: false, Error: "Internal Server Error" });
   }
 };
+
 
 
 /*generateOTP in 6 digit */
@@ -87,6 +94,7 @@ exports.verifyOTP = async (req, res) => {
 };
 
 
+
 /* reset password */
 exports.resetPassword = async (req, res) => {
   try {
@@ -100,11 +108,18 @@ exports.resetPassword = async (req, res) => {
       if (!user) {
         return res.json({ message: "User not registered" });
       }
+      const hashedPassword = await bcrypt.hash(password, 12);
       await User.updateOne(
-        { email: email },
-        { $set: { password: password } }
+        {
+          email: email,
+        },
+        {
+          $set: {
+            password: hashedPassword,
+          },
+        }
       );
-      req.app.locals.resetSession = false;
+      req.app.locals.resetSession = false; // reset session
       return res.status(201).json({ msg: "Record Updated...!" });
     } catch (error) {
       return res.status(500).json({ error });
@@ -113,6 +128,7 @@ exports.resetPassword = async (req, res) => {
     return res.status(401).json({ error: "Invalid Request" });
   }
 };
+
 
 /*.............................registation add user table............................*/
 
