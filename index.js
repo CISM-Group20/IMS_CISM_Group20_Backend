@@ -16,7 +16,7 @@ connectDB();
 
 
 app.use(cors({
-    origin: ["https://imsfrontend.vercel.app"],
+    origin: ["http://localhost:5173"],
     methods: ['GET','POST','PUT',"DELETE"],
     credentials: true
 }))
@@ -26,6 +26,7 @@ app.use(express.json());
 app.use(cookieParser());
 
 
+
 app.use("/api/users", userRoute);
 
 app.use(express.static('Public'))
@@ -33,7 +34,7 @@ app.use(body.json());
 
 
 
-app.listen(8007, () => {
+app.listen(8011, () => {
    console.log("Server is running")
  })
 
