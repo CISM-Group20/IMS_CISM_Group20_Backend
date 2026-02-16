@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require("express");
 const cors = require("cors");
+const jwt = require("jsonwebtoken");
 const cookieParser = require("cookie-parser");
 const morgan = require("morgan");
 const Evaluationformdetails = require('./models/Evaluationformdetails.js');
@@ -15,7 +16,7 @@ connectDB();
 
 
 app.use(cors({
-    origin: ["https://imsfrontend.vercel.app","http://localhost:5173"],
+    origin: ["https://imsfrontend.vercel.app"],
     methods: ['GET','POST','PUT',"DELETE"],
     credentials: true
 }))
@@ -25,15 +26,15 @@ app.use(express.json());
 app.use(cookieParser());
 
 
-app.use("/api", userRoute);
+app.use("/api/users", userRoute);
 
 app.use(express.static('Public'))
 app.use(body.json());
 
 
 
-app.listen(8000, () => {
-   console.log("Server is running on port 8000");
+app.listen(8007, () => {
+   console.log("Server is running")
  })
 
 
