@@ -4,6 +4,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const otpGenerator = require("otp-generator");
 const Task = require("../models/task.js");
+const validator = require('validator'); 
 
 /*..............................login page.............................................*/
 
@@ -14,6 +15,14 @@ exports.login = async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({ message: "All fields are required" });
     }
+
+    if (typeof email !== 'string') {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid email format' 
+      });
+    }
+
     const user = await User.findOne({ email });
 
     if (!user) {
@@ -54,11 +63,16 @@ exports.login = async (req, res) => {
 exports.generateOTP = async (req, res, next) => {
   try {
     const { email } = req.body;
-    const existingUser = await User.findOne({ email });
+    // Validate and sanitize email
+    if (!email || typeof email !== 'string' || !validator.isEmail(email)) {
+      return res.status(400).json({ message: "Invalid email format" });
+    }
+    const sanitizedEmail = email.trim().toLowerCase();
 
-    if (!existingUser) {
-      return res.json({ msg: "User not registered" });
-    } else {
+    // Use sanitized email in query
+    const existingUser = await User.findOne({ email: sanitizedEmail });
+
+    if (existingUser) {
       const otp = await otpGenerator.generate(6, {
         lowerCaseAlphabets: false,
         upperCaseAlphabets: false,
@@ -68,14 +82,15 @@ exports.generateOTP = async (req, res, next) => {
       // Store OTP in req.app.locals for later verification if needed
       req.app.locals.OTP = otp;
 
-      const otpTimeout = setTimeout(() => {
+      setTimeout(() => {
         req.app.locals.OTP = null;
       }, 1 * 60 * 1000);
-
-
       next();
+
+    } else {
+      return res.json({ msg: "User not registered" });
     }
-  } catch (error) {
+  }catch (error) {
     console.error(error);
     res.status(500).send({ error: "Internal Server Error" });
   }
@@ -88,7 +103,7 @@ exports.verifyOTP = async (req, res) => {
   
 
   // Check if the OTP is valid
-  if (parseInt(req.app.locals.OTP) === parseInt(code)) {
+  if (Number.parseInt(req.app.locals.OTP) === Number.parseInt(code)) {
     req.app.locals.resetSession = true; // start session for reset password
     res.status(201).send({ msg: "Verify Successsfully!" });
   } else {
@@ -100,6 +115,7 @@ exports.verifyOTP = async (req, res) => {
 };
 
 
+
 /* reset password */
 exports.resetPassword = async (req, res) => {
   try {
@@ -107,16 +123,21 @@ exports.resetPassword = async (req, res) => {
       return res.status(440).json({ msg: "Session expired!" });
 
     const { email, password } = req.body;
+     // Validate and sanitize email
+    if (!email || typeof email !== 'string' || !validator.isEmail(email)) {
+      return res.status(400).json({ message: "Invalid email format" });
+     }
+    const sanitizedEmail = email.trim().toLowerCase();
 
     try {
-      const user = await User.findOne({ email });
+      const user = await User.findOne({ email: sanitizedEmail });
       if (!user) {
         return res.json({ message: "User not registered" });
       }
       const hashedPassword = await bcrypt.hash(password, 12);
       await User.updateOne(
         {
-          email: email,
+          email: sanitizedEmail,
         },
         {
           $set: {
@@ -169,6 +190,12 @@ exports.getUserById= async (req, res) => {
 exports.deleteUser = async (req, res) => {
   try {
     let id = req.params.id;
+    
+     // Validate and sanitize id
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    } 
+
     const user = await User.findByIdAndDelete(id);
      // Delete tasks associated with the user
                  await Task.deleteMany({ _userId: id });   
@@ -198,6 +225,11 @@ exports.deleteUser = async (req, res) => {
 exports.changeRole = async (req, res) => {
   const { role } = req.body;
   const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({ msg: "Invalid user ID" });
+  }
+
   try {
    
     //console.log(id);
@@ -226,8 +258,6 @@ exports.changeRole = async (req, res) => {
       }
     );
 
- 
-
     return res.status(201).json({ msg: "Record Updated...!" });
   } catch (err) {
     console.error(err);
@@ -236,15 +266,19 @@ exports.changeRole = async (req, res) => {
 };
 
 
-
-
-
 //register user
 exports.register = async (req, res, next) => {
   try {
  
     const { fname, lname, dob, role, gender, email, password,jobtitle,employmentType,department} = req.body;
-    const existingUser = await User.findOne({ email });
+     
+    if (!email || typeof email !== 'string' || !validator.isEmail(email)) {
+      return res.status(400).json({ message: "Invalid email format" });
+    }
+
+    const sanitizedEmail = email.trim().toLowerCase();
+    const existingUser = await User.findOne({ email: sanitizedEmail });
+
     if (existingUser) {
       return res.json({ msg: "User already exists" });
     }
@@ -1176,6 +1210,11 @@ exports.getCommentsById = async (req, res) => {
 exports.getReviewDetailsById = async (req, res) => {
   try {
     const { id } = req.params;
+       // Validate and sanitize id
+       if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ msg: "Invalid review ID" });
+      }
+  
     const evaluationDetails = await EvaluationFormDetails.findOne(
       { _id: id },
         "job_performance_criterias_evaluator core_values_criterias_evaluator job_performance_criterias_mentor core_values_criterias_mentor job_performance_scores_evaluator core_values_scores_evaluator job_performance_scores_mentor core_values_scores_mentor overall_performance_mentor overall_performance_evaluator action_taken_mentor comment_evaluator comment_mentor evaluated_date_Evaluator evaluated_date_Mentor evaluator evaluator_email  evaluate_before"
