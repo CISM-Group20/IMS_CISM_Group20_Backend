@@ -13,7 +13,7 @@ const app = express();
 const connectDB = require("./utils/db.js");
 connectDB();
 
-// 1️⃣ HELMET - Security Headers (FIRST)
+//implement  HELMET
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -37,7 +37,7 @@ app.use(
   }),
 );
 
-// 2️⃣ CORS
+// implement CORS
 const allowedOrigins = [
   "https://imsfrontend.vercel.app",
   "http://localhost:5173",
@@ -60,13 +60,12 @@ app.use(
   }),
 );
 
-// 3️⃣ BODY PARSERS - MUST be BEFORE routes! (THIS WAS THE ISSUE)
 app.use(express.json({limit: "10mb"}));
 app.use(express.urlencoded({extended: true, limit: "10mb"}));
 app.use(body.json());
 app.use(cookieParser());
 
-// 4️⃣ RATE LIMITING
+// implement RATE LIMITING
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
@@ -87,16 +86,15 @@ const authLimiter = rateLimit({
   skipSuccessfulRequests: true,
 });
 
-// 5️⃣ Apply auth limiters to specific routes (BEFORE main routes)
+//Apply rate limiters
 app.use("/api/users/login", authLimiter);
 app.use("/api/users/generateOTP&sendmail", authLimiter);
 app.use("/api/users/verifyOTP", authLimiter);
 app.use("/api/users/resetPassword", authLimiter);
 
-// 6️⃣ VIEW ENGINE
 app.set("view engine", "ejs");
 
-// 7️⃣ LOGGING
+//implement LOGGING
 app.use(
   morgan("combined", {
     stream: {
@@ -117,13 +115,9 @@ app.use(
   }),
 );
 
-// 8️⃣ STATIC FILES
 app.use(express.static("Public"));
-
-// 9️⃣ ROUTES - THIS MUST COME AFTER BODY PARSERS!
 app.use("/api/users", userRoute);
 
-// 🔟 ERROR HANDLER
 app.use((err, req, res, next) => {
   logger.error({
     message: err.message,
@@ -134,7 +128,6 @@ app.use((err, req, res, next) => {
   res.status(500).json({error: "Internal server error"});
 });
 
-// 1️⃣1️⃣ 404 HANDLER
 app.use((req, res) => {
   logger.warn(`404 - ${req.method} ${req.path}`);
   res.status(404).json({error: "Route not found"});

@@ -9,10 +9,9 @@ const levels = {
   info: 2,
   http: 3,
   debug: 4,
-  security: 5, // Custom level for security events
+  security: 5, // for security events
 };
 
-// Define log colors
 winston.addColors({
   error: "red",
   warn: "yellow",
@@ -22,7 +21,7 @@ winston.addColors({
   security: "cyan",
 });
 
-// Custom format for security logs
+//format for security logs
 const securityFormat = winston.format((info) => {
   if (info.level === "security") {
     info.timestamp = new Date().toISOString();
@@ -33,7 +32,7 @@ const securityFormat = winston.format((info) => {
   return info;
 });
 
-// Create the logger
+//log creation
 const logger = winston.createLogger({
   levels,
   format: winston.format.combine(
@@ -43,7 +42,6 @@ const logger = winston.createLogger({
     winston.format.json(),
   ),
   transports: [
-    // Security events log (append-only, tamper-resistant)
     new DailyRotateFile({
       filename: path.join(__dirname, "../logs/security-%DATE%.log"),
       datePattern: "YYYY-MM-DD",
@@ -55,8 +53,6 @@ const logger = winston.createLogger({
         winston.format.json(),
       ),
     }),
-
-    // Error log
     new DailyRotateFile({
       filename: path.join(__dirname, "../logs/error-%DATE%.log"),
       datePattern: "YYYY-MM-DD",
@@ -64,8 +60,6 @@ const logger = winston.createLogger({
       maxFiles: "30d",
       level: "error",
     }),
-
-    // Combined log
     new DailyRotateFile({
       filename: path.join(__dirname, "../logs/combined-%DATE%.log"),
       datePattern: "YYYY-MM-DD",
@@ -75,7 +69,6 @@ const logger = winston.createLogger({
   ],
 });
 
-// Add console logging in development
 if (process.env.NODE_ENV !== "production") {
   logger.add(
     new winston.transports.Console({
@@ -87,7 +80,6 @@ if (process.env.NODE_ENV !== "production") {
   );
 }
 
-// Security event logging helper
 logger.security = (event, details = {}) => {
   logger.log({
     level: "security",
