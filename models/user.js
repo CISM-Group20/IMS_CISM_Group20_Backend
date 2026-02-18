@@ -2,28 +2,28 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const userSchema = mongoose.Schema(
   {
-    
-    fname:{
+
+    fname: {
       type: String,
       required: true,
     },
 
-    lname:{
+    lname: {
       type: String,
       required: true,
     },
 
-    dob:{
+    dob: {
       type: String,
       required: true,
     },
 
-     role:{
+    role: {
       type: String,
       required: true,
     },
 
-     email: {
+    email: {
       type: String,
       required: true,
     },
@@ -38,94 +38,108 @@ const userSchema = mongoose.Schema(
       required: true,
     },
 
-    jobtitle:{
+    jobtitle: {
       type: String,
-      required:false,
+      required: false,
     },
-    employmentType:{
+    employmentType: {
       type: String,
-      required:false,
+      required: false,
     },
-    department:{
+    department: {
       type: String,
-      required:false,
+      required: false,
     },
     imageUrl: {
       type: String,
       required: false,
     },
-    cvUrl :{
+    cvUrl: {
       type: String,
       required: false,
     },
- 
-  university: {
-    type: String,
-   // required: true
-  },
 
-  GPA: {
-    type: Number,
-   // required: true
-  },
+    university: {
+      type: String,
+      // required: true
+    },
 
-  interviewScore: {
-    type: Number,
-   // required: true
-  },
+    GPA: {
+      type: Number,
+      // required: true
+    },
 
-  interviewFeedback: {
-    type: String,
-   // required: true
-  },
+    interviewScore: {
+      type: Number,
+      // required: true
+    },
+
+    interviewFeedback: {
+      type: String,
+      // required: true
+    },
 
 
-  mentor: {
-    type: String,
-    //required: true
-  },
-  
-  mentorEmail: {
-    type: String,
-  
-  },
-  phonenumber: {
-    type: Number,
-   // required: true
-  },
-  Bio:{
-    type: String,
-    
-  },
-  schedules: [{
-    title: String,
-    start: Date,
-    end: Date,
-  }],
-  leaveApplications: [{
-    leaveDate: {
+    mentor: {
+      type: String,
+      //required: true
+    },
+
+    mentorEmail: {
+      type: String,
+
+    },
+    phonenumber: {
+      type: Number,
+      // required: true
+    },
+    Bio: {
+      type: String,
+
+    },
+    schedules: [{
+      title: String,
+      start: Date,
+      end: Date,
+    }],
+    leaveApplications: [{
+      leaveDate: {
+        type: Date,
+        required: true,
+      },
+      reason: {
+        type: String,
+        required: true,
+      },
+      status: {
+        type: String,
+        required: true,
+        enum: ['Pending', 'Approved', 'Rejected'],
+        default: 'Pending',
+      },
+    }],
+
+    // Account lockout fields
+    failedLoginAttempts: {
+      type: Number,
+      default: 0,
+    },
+    accountLockedUntil: {
       type: Date,
-      required: true,
+      default: null,
     },
-    reason: {
-      type: String,
-      required: true,
+    isAccountLocked: {
+      type: Boolean,
+      default: false,
     },
-    status: {
-      type: String,
-      required: true,
-      enum: ['Pending', 'Approved', 'Rejected'],
-      default: 'Pending',
-    },
-  }],
-  
-   },
-  );
-   userSchema.pre("save", async function () {
-     this.password = await bcrypt.hash(this.password, 12);
 
-     });
-   
+  },
+);
+userSchema.pre("save", async function () {
+  this.password = await bcrypt.hash(this.password, 12);
+
+});
+
 const User = mongoose.model("users", userSchema);
 
 module.exports = User;
