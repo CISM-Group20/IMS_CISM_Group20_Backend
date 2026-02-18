@@ -1,13 +1,11 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/user');
-
 const { param, validationResult } = require('express-validator');
 const mongoose = require('mongoose');
 const mongoSanitize = require('express-mongo-sanitize');
 
-
 /** auth middleware */
- async function Auth(req, res, next){
+async function Auth(req, res, next){
     try {
         // access authorize header to validate request
         const token = req.headers.authorization.split(" ")[1];
@@ -17,10 +15,7 @@ const mongoSanitize = require('express-mongo-sanitize');
         req.data = decodedToken;
         console.log("decodedToken");
         console.log(decodedToken);    
-       
-        // Sanitize token and decoded data
-        mongoSanitize.sanitize(req.data);
-        // Validate user id if present
+
         if (req.data && req.data.id && !mongoose.Types.ObjectId.isValid(req.data.id)) {
             return res.status(400).json({ error: "Invalid user ID" });
         }
@@ -30,24 +25,19 @@ const mongoSanitize = require('express-mongo-sanitize');
     } catch (error) {
         res.status(401).json({ error : "Authentication Failed!"})
     }
-
-
 } 
 
-
- function localVariables(req, res, next){
+function localVariables(req, res, next){
     req.app.locals = {
         OTP : null,
         resetSession : false
     }
-   
     next();
 }
 
-
-
-async function IsAdmin(req, res, next){
-    const {id} =req.data;
+// Helper to reduce duplication
+async function checkRole(req, res, next, allowedRoles, attachUser = false, custom403Msg = null) {
+    const { id } = req.data;
     if (!mongoose.Types.ObjectId.isValid(id)) {
         return res.status(400).json({ error: "Invalid user ID" });
     }
@@ -55,112 +45,46 @@ async function IsAdmin(req, res, next){
     if (!user) {
         return res.status(404).json({ error: "User not found" });
     }
-    if (user.role !== "admin") {
-        return res.status(403).json({ msg: "You do not have permission to access this function" });
+    if (!allowedRoles.includes(user.role)) {
+        return res.status(403).json({ msg: custom403Msg || "You do not have permission to access this function" });
     }
+    if (attachUser) req.user = user;
     next();
-  
 }
 
-async function IsIntern(req, res, next){
-    const {id} =req.data;
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(400).json({ error: "Invalid user ID" });
-    }
-    const user = await User.findById(id);
-    if (!user) {
-        return res.status(404).json({ error: "User not found" });
-    }
-    if (user.role !== "intern") {
-        return res.status(403).json({ msg: "You do not have permission to access this function" });
-    }
-    req.user = user;
-    next();
-
+function IsAdmin(req, res, next) {
+    checkRole(req, res, next, ["admin"]);
 }
 
-async function IsMentor(req, res, next){
-    const {id} =req.data;
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(400).json({ error: "Invalid user ID" });
-    }
-    const user = await User.findById(id);
-    if (!user) {
-        return res.status(404).json({ error: "User not found" });
-    }
-    if (user.role !== "mentor") {
-        return res.status(403).json({ msg: "You do not have permission to access this function" });
-    }
-    req.user = user;
-    next();
-
+function IsIntern(req, res, next) {
+    checkRole(req, res, next, ["intern"], true);
 }
 
-
-async function IsEvaluator(req, res, next){
-    const {id} =req.data;
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(400).json({ error: "Invalid user ID" });
-    }
-    const user = await User.findById(id);
-    if (!user) {
-        return res.status(404).json({ error: "User not found" });
-    }
-    if (user.role !== "evaluator") {
-        return res.status(403).json({ msg: "You do not have permission to access this function" });
-    }
-    next();
-
+function IsMentor(req, res, next) {
+    checkRole(req, res, next, ["mentor"], true);
 }
 
-async function IsManager(req, res, next){
-    const {id} =req.data;
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(400).json({ error: "Invalid user ID" });
-    }
-    const user = await User.findById(id);
-    if (!user) {
-        return res.status(404).json({ error: "User not found" });
-    }
-    if (user.role !== "manager") {
-        return res.status(403).json({ msg: "You do not have permission to access this function" });
-    }
-    next();
-
+function IsEvaluator(req, res, next) {
+    checkRole(req, res, next, ["evaluator"]);
 }
 
-async function IsEvaluatorORIsMentor(req, res, next){
-    const {id} =req.data;
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(400).json({ error: "Invalid user ID" });
-    }
-    const user = await User.findById(id);
-    if (!user) {
-        return res.status(404).json({ error: "User not found" });
-    }
-    if (user.role !== "evaluator" && user.role !== "mentor" && user.role !== "admin") {
-        return res.status(403).json({ msg: "You do not have permission to access this function" });
-    }
-    next();
-
+function IsManager(req, res, next) {
+    checkRole(req, res, next, ["manager"]);
 }
 
+function IsEvaluatorORIsMentor(req, res, next) {
+    checkRole(req, res, next, ["evaluator", "mentor", "admin"]);
+}
 
-async function IsNotIntern(req, res, next){
-    const {id} =req.data;
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(400).json({ error: "Invalid user ID" });
-    }
-    const user = await User.findById(id);
-    if (!user) {
-        return res.status(404).json({ error: "User not found" });
-    }
-    if (user.role !== "admin" && user.role !== "mentor" && user.role !== "evaluator" && user.role !== "manager") {
-        return res.status(403).json({ msg: "You are not authorized to set this data" });
-    }
-    req.user = user;
-    next();
-
+function IsNotIntern(req, res, next) {
+    checkRole(
+        req,
+        res,
+        next,
+        ["admin", "mentor", "evaluator", "manager"],
+        true,
+        "You are not authorized to set this data"
+    );
 }
 
 async function IsUser(req, res, next){
@@ -176,8 +100,17 @@ async function IsUser(req, res, next){
     next();
 }
 
-
-
-module.exports ={Auth, localVariables,IsAdmin,IsIntern,IsMentor,IsEvaluator,IsManager,IsNotIntern,IsUser,IsEvaluatorORIsMentor};
+module.exports = {
+    Auth,
+    localVariables,
+    IsAdmin,
+    IsIntern,
+    IsMentor,
+    IsEvaluator,
+    IsManager,
+    IsNotIntern,
+    IsUser,
+    IsEvaluatorORIsMentor
+};
 
 
