@@ -9,10 +9,15 @@ const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const body = require("body-parser");
 const app = express();
+const { param, validationResult } = require('express-validator');
+const mongoSanitize = require('express-mongo-sanitize');
 
 const connectDB = require("./utils/db.js");
 connectDB();
 
+
+// Sanitize MongoDB queries
+app.use(mongoSanitize());
 //implement  HELMET
 app.use(
   helmet({
@@ -132,7 +137,19 @@ app.use((req, res) => {
   logger.warn(`404 - ${req.method} ${req.path}`);
   res.status(404).json({error: "Route not found"});
 });
-
+// Express-validator error handler middleware
+app.use((req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      errors: errors.array().map(e => ({
+        msg: e.msg,
+        param: e.param
+      }))
+    });
+  }
+  next();
+});
 const PORT = process.env.PORT || 8011;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
