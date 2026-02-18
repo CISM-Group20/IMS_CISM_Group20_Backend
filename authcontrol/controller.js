@@ -402,42 +402,54 @@ exports.getUser = async (req, res) => {
 
 
 //update user profile
-exports.updateuser = async (req, res) => {
-  const { id } = req.data;
-  try {
-
-    const body = req.body;
-    // Update the data
-    const result = await User.updateOne({ _id: id }, body);
-
-    if (result.nModified === 0) {
-      return res.status(404).send({ error: "User not found or no changes applied" });
+exports.updateuser=async (req, res) => {
+    const { id } = req.data;
+    try {
+    
+      const body = req.body;
+      // Update the data
+      const result = await User.updateOne({ _id: id}, body);
+      
+      if (result.nModified === 0) {
+        return res.status(404).send({ error: "User not found or no changes applied" });
+      }
+      return res.status(200).send({ msg: "Record Updated" });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).send({ error: "Internal Server Error" });
     }
-    return res.status(200).send({ msg: "Record Updated" });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).send({ error: "Internal Server Error" });
-  }
-};
-
-//upload photo user
+  };
+// Helper function to validate Firebase Storage URLs
+function isValidFirebaseUrl(url, bucket) {
+  if (typeof url !== 'string') return false;
+  const bucketEscaped = bucket.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const pattern = new RegExp(`^https://firebasestorage\\.googleapis\\.com/v0/b/${bucketEscaped}/o/[^?]+(\\?.*)?$`);
+  return pattern.test(url);
+}
+// Upload user profile image (authenticated user only)
 exports.uploadImageByuser = async (req, res) => {
+  const id = req.data.id; // Use authenticated user ID
+  const { imageUrl } = req.body;
+  const firebaseBucket = "zionlogy-4b6e6.appspot.com";
 
-  const { id } = req.data;
-  console.log(req.body);
-
+  if (!imageUrl) {
+    return res.status(400).json({ error: "imageUrl is required in body" });
+  }
+  if (!isValidFirebaseUrl(imageUrl, firebaseBucket)) {
+    return res.status(400).json({ error: "Invalid imageUrl. Only Firebase Storage URLs are allowed." });
+  }
   try {
-    const updateduser = await User.findByIdAndUpdate(id, req.body, { new: true });
+    const updateduser = await User.findByIdAndUpdate(id, { imageUrl }, { new: true });
     if (!updateduser) {
-      return res.status(404).json({ message: ' user not found' });
+      return res.status(404).json({ message: 'user not found' });
     }
     res.json({ msg: "update successfully", updateduser });
-
   } catch (error) {
     res.status(500).json({ msg: "Internal Server Error" });
   }
-
 };
+
+
 
 /*......................................intern table create.......................*/
 // Read Intern Users
@@ -724,26 +736,32 @@ exports.secure = async (req, res) => {
 
 /*......................................cv upload.......................*/
 
-//upload cv user
-exports.uploadcvByAdmin = async (req, res) => {
 
+
+// Upload CV by admin
+exports.uploadcvByAdmin = async (req, res) => {
   const { cvUrl } = req.body;
   const { userId } = req.params;
+  const firebaseBucket = "zionlogy-4b6e6.appspot.com";
 
-  if (!cvUrl || !userId) {
-    return res.status(400).json({ msg: "Please provide both cvfileURL and userId" });
+  if (!cvUrl) {
+    return res.status(400).json({ msg: "cvUrl is required in body" });
+  }
+  if (!userId) {
+    return res.status(400).json({ msg: "userId is required in params" });
+  }
+  if (!isValidFirebaseUrl(cvUrl, firebaseBucket)) {
+    return res.status(400).json({ error: "Invalid cvUrl. Only Firebase Storage URLs are allowed." });
   }
   try {
     const updateduser = await User.findByIdAndUpdate(userId, { cvUrl }, { new: true });
     if (!updateduser) {
-      return res.status(404).json({ message: ' user not found' });
+      return res.status(404).json({ message: 'user not found' });
     }
-    res.json({ msg: " Update cv file successfully", updateduser });
-
+    res.json({ msg: "Update cv file successfully", updateduser });
   } catch (error) {
     res.status(500).json({ msg: "Internal Server Error" });
   }
-
 };
 
 exports.deletecvByAdmin = async (req, res) => {
