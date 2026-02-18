@@ -1,6 +1,10 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/user');
 
+const { param, validationResult } = require('express-validator');
+const mongoose = require('mongoose');
+const mongoSanitize = require('express-mongo-sanitize');
+
 
 /** auth middleware */
  async function Auth(req, res, next){
@@ -14,6 +18,12 @@ const User = require('../models/user');
         console.log("decodedToken");
         console.log(decodedToken);    
        
+        // Sanitize token and decoded data
+        mongoSanitize.sanitize(req.data);
+        // Validate user id if present
+        if (req.data && req.data.id && !mongoose.Types.ObjectId.isValid(req.data.id)) {
+            return res.status(400).json({ error: "Invalid user ID" });
+        }
 
         next()
 
@@ -38,117 +48,132 @@ const User = require('../models/user');
 
 async function IsAdmin(req, res, next){
     const {id} =req.data;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ error: "Invalid user ID" });
+    }
     const user = await User.findById(id);
-
-     if (user.role !== "admin") {
-          return res
-            .status(403)
-            .json({ msg: "You do not have permission to access this function" });
-        }
-            next();
+    if (!user) {
+        return res.status(404).json({ error: "User not found" });
+    }
+    if (user.role !== "admin") {
+        return res.status(403).json({ msg: "You do not have permission to access this function" });
+    }
+    next();
   
 }
 
 async function IsIntern(req, res, next){
     const {id} =req.data;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ error: "Invalid user ID" });
+    }
     const user = await User.findById(id);
-
+    if (!user) {
+        return res.status(404).json({ error: "User not found" });
+    }
     if (user.role !== "intern") {
-        return res
-          .status(403)
-          .json({ msg: "You do not have permission to access this function" });
-      }
-          req.user = user;
-          next();
+        return res.status(403).json({ msg: "You do not have permission to access this function" });
+    }
+    req.user = user;
+    next();
 
 }
 
 async function IsMentor(req, res, next){
     const {id} =req.data;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ error: "Invalid user ID" });
+    }
     const user = await User.findById(id);
-
+    if (!user) {
+        return res.status(404).json({ error: "User not found" });
+    }
     if (user.role !== "mentor") {
-        return res
-          .status(403)
-          .json({ msg: "You do not have permission to access this function" });
-      }
-          req.user = user;
-          next();
+        return res.status(403).json({ msg: "You do not have permission to access this function" });
+    }
+    req.user = user;
+    next();
 
 }
 
 
 async function IsEvaluator(req, res, next){
     const {id} =req.data;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ error: "Invalid user ID" });
+    }
     const user = await User.findById(id);
-
+    if (!user) {
+        return res.status(404).json({ error: "User not found" });
+    }
     if (user.role !== "evaluator") {
-        return res
-          .status(403)
-          .json({ msg: "You do not have permission to access this function" });
-      }
-          next();
+        return res.status(403).json({ msg: "You do not have permission to access this function" });
+    }
+    next();
 
 }
 
 async function IsManager(req, res, next){
     const {id} =req.data;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ error: "Invalid user ID" });
+    }
     const user = await User.findById(id);
-
+    if (!user) {
+        return res.status(404).json({ error: "User not found" });
+    }
     if (user.role !== "manager") {
-        return res
-          .status(403)
-          .json({ msg: "You do not have permission to access this function" });
-      }
-          next();
+        return res.status(403).json({ msg: "You do not have permission to access this function" });
+    }
+    next();
 
 }
 
 async function IsEvaluatorORIsMentor(req, res, next){
     const {id} =req.data;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ error: "Invalid user ID" });
+    }
     const user = await User.findById(id);
-
+    if (!user) {
+        return res.status(404).json({ error: "User not found" });
+    }
     if (user.role !== "evaluator" && user.role !== "mentor" && user.role !== "admin") {
-        return res
-          .status(403)
-          .json({ msg: "You do not have permission to access this function" });
-      }
-          next();
+        return res.status(403).json({ msg: "You do not have permission to access this function" });
+    }
+    next();
 
 }
 
 
 async function IsNotIntern(req, res, next){
     const {id} =req.data;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ error: "Invalid user ID" });
+    }
     const user = await User.findById(id);
     if (!user) {
-        return res
-          .status(404)
-          .json({ msg: "User not found" });
+        return res.status(404).json({ error: "User not found" });
     }
-
-        if (user.role !== "admin"&& user.role !== "mentor" && user.role !== "evaluator" && user.role !== "manager") {
-        return res
-          .status(403)
-          .json({ msg: "You are not authorized to set this data"  });
-      }
-          req.user = user;
-          next();
+    if (user.role !== "admin" && user.role !== "mentor" && user.role !== "evaluator" && user.role !== "manager") {
+        return res.status(403).json({ msg: "You are not authorized to set this data" });
+    }
+    req.user = user;
+    next();
 
 }
 
 async function IsUser(req, res, next){
     const {id} = req.data;
-    const user = await User.findById(id);
- 
-    if (!user) {
-        return res
-          .status(404)
-          .json({ msg: "User not found" });
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ error: "Invalid user ID" });
     }
-    
-     req.user = user;
-     next();
+    const user = await User.findById(id);
+    if (!user) {
+        return res.status(404).json({ error: "User not found" });
+    }
+    req.user = user;
+    next();
 }
 
 
